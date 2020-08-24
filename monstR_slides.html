@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Presenting monstR:</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Emma Vestesson" />
+    <meta name="date" content="2020-08-25" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Presenting monstR:
+## Why R was vital to our response to COVID-19
+### Emma Vestesson
+### 2020-08-25
+
+---
+
+
+
+
+
+
+
+## About me
+Senior data analyst at the Health Foundation
+
+Part-time PhD student at UCL Great Ormond Street Institute of Child Health
+
+Organiser of R-ladies London
+
+`#rdogladies`
+
+ &lt;img src="IMG_9381.jpg" style="transform:rotate(90deg); width: 50%" align=right /&gt;
+
+---
+class: middle 
+
+.pull-left[
+![](https://www.health.org.uk/themes/custom/health_foundation/assets/images/logo--default.png)
+
+]
+
+.pull-right[
+
+The Health Foundation is an independent charity committed to bringing about better health and health care for people
+in the UK.
+We connect what works 
+on the ground with
+effective policymaking 
+and vice versa.
+]
+
+
+
+---
+class: inverse, middle, center
+
+# Ensuring everyone’s health and care benefits from analytics and data-driven technology
+
+---
+
+## Our work pre-COVID-19
+
+.pull-left[
+### Sharing our code
+ &lt;img src="github_screen.png" style=" width: 100%" align=right /&gt;
+
+]
+
+.pull-right[
+### Sharing our learning
+ &lt;img src="blog_screen.png" style=" width: 100%" align=right /&gt;
+
+]
+---
+## How did COVID-19 change our ways of working?
+
+- Working remotely
+--
+
+- Work became more reactive - often responding to data releases the same day
+
+--
+
+- Work updated on a regular basis
+
+--
+
+- Work informing policy - vital to be transparent
+--
+
+
+We needed an open data pipeline to enable us to analyse data more quickly in a transparent and reproducible way.
+
+
+---
+
+
+# Open data pipeline
+
+1. download the data
+1. clean the data
+1. create charts and tables
+&lt;br&gt;
+--
+&lt;br/&gt;
+.pull-left[
+&lt;img src=https://www.r-project.org/logo/Rlogo.png style="width: 50%" /&gt;
+]
+.pull-right[
+&lt;img src=GitHub-Mark-120px-plus.png style="width: 40%"  /&gt;
+]
+
+---
+
+# Getting your hands on the data
+
+You can download the data directly from the internet without leaving RStudio.
+
+`download.file()` from base R
+
+`curl_download()` from the `curl` package
+
+
+--
+
+.pull-left[
+&lt;img src=https://btrtoday.sfo2.digitaloceanspaces.com/uploads/THURS122916-FIT.jpg style="width: 70%" align=left /&gt;
+]
+
+
+.pull-right[
+The link changes every time the data is updated 
+]
+
+
+---
+
+
+Scrape the link
+
+```r
+link &lt;- 'https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/weeklyprovisionalfiguresondeathsregisteredinenglandandwales'
+bow(link)
+page &lt;- read_html(link)
+links &lt;- page %&gt;% 
+  html_nodes(css=".btn--thick") %&gt;%
+  html_attr('href')
+
+file_names &lt;- fs::path_file(links)
+
+link_2020 &lt;- links[stringr::str_detect(links, '2020.')]
+name_2020 &lt;- links[stringr::str_detect(file_names, '2020.')]
+destfile_ONS &lt;- here::here('data', 'original data', name_2020)
+curl_download(paste0('https://www.ons.gov.uk/', link_2020), destfile = destfile_ONS)
+```
+
+---
+
+
+
+ &lt;img src="mortality_screenshot.png" style=" width: 90%" /&gt;
+
+
+--
+
+- `clean_names()` and `remove_empty()` functions  from the `janitor` package
+
+--
+
+- skiping rows when reading in data and dropping certain rows `filter(row_number()&lt;14, row_number()&gt;=3) ` (risky, what if data changes next week)
+
+--
+
+- wrote unit tests using `testthat` package to warn us if data changes
+
+---
+class: 
+# The birth of monstR
+
+
+Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
+
+ &lt;img src="monstr_gh_screengrab.png " style=" width: 100%" align=right /&gt;
+
+
+
+---
+
+# What is an API
+
+**Wikipedia definition** : An application programming interface (API) is a computing interface which defines interactions between multiple software intermediaries.
+
+--
+
+**My definition** : A bunch of json files that will eventually give me a link 
+
+Let's have a look!
+
+https://api.beta.ons.gov.uk/v1/datasets
+
+---
+
+### Available data sets
+
+
+
+```r
+datasets &lt;- ons_available_datasets()
+```
+
+
+
+```r
+knitr::kable(datasets[1:5], format='html')
+```
+
+&lt;table&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; id &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; title &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; description &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; unit_of_measure &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; next_release &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; cpih01 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Consumer Prices Index including owner occupiers' housing costs (CPIH) &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; CPIH is the most comprehensive measure of inflation. It extends CPI to include a measure of the costs associated with owning, maintaining and living in one's own home, known as owner occupiers' housing costs (OOH), along with council tax. This dataset provides CPIH time series (2005 to latest published month), allowing users to customise their own selection, view or download. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Index: 2015=100 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 16 September 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; mid-year-pop-est &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Population Estimates for UK, England and Wales, Scotland and Northern Ireland &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of the usual resident population for the UK as at 30 June of the reference year. Provided by administrative area, single year of age and sex. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Number of people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; June 2021 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-table-7-hours &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual summary of hours worked, place of work by Local Authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of paid hours worked for UK employees by gender and full/part-time working by work based Region to Local Authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Hours per week &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-table-7-earnings &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual summary of earnings, place of work by Local Authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of weekly, hourly and annual earnings for UK employees by gender and full/part-time working by work based Region to Local Authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; £ &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-table-8-hours &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual summary of hours worked, place of residence by Local Authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of paid hours worked for UK employees by gender and full/part-time working by home based Region to Local Authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Hours per week &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-table-8-earnings &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual summary of earnings, place of residence by Local Authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of weekly, hourly and annual earnings for UK employees by gender and full/part-time working by home based Region to Local Authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; £ &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; opss-rates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Occupational Pension Schemes Survey, Rates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; The nature of occupational pension provision in the UK providing summary data on the rates of contributions paid &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Millions of people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; September 2019 (provisional) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; opss-membership &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Occupational Pension Schemes Survey, Membership &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; The nature of occupational pension provision in the UK providing summary data on the membership of schemes &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Millions of people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; September 2019 (provisional) &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; wellbeing-year-ending &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Personal well-being estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of life satisfaction, worthwhile, happiness and anxiety in the UK for the years ending March 2012 to September 2018. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates displayed are the percentage value with the exception of 'Average (mean)' where this is the average score out of 10. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; wellbeing-local-authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Personal well-being estimates by local authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of life satisfaction, worthwhile, happiness and anxiety at the UK, country and local authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; TBC &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; trade &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; UK trade: country by commodity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Country by commodity data on the UK's trade in goods, including trade by all countries and selected commodities, exports and imports, non seasonally adjusted. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; £ &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 11 September 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; life-expectancy-local-authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Health state life expectancy at birth and at age 65 by local areas, UK &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Life expectancy, healthy life expectancy and disability-free life expectancy – at birth and age 65 by sex for local areas in the UK, from 2013-2015 to 2015-2017. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; December 2019 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; suicides-in-the-uk &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Suicide registrations in England and Wales by local authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Number of suicides by local authority in England and Wales, registered from 2002. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-7-and-8 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, place of work and residence by local authority: ASHE Tables 7 and 8 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Allows you to produce customisable time series of XLS and CSV tables for key variables and measures from Annual Survey of Hours and Earnings (ASHE) Tables 7 &amp;amp; 8 down to local authority level. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; index-private-housing-rental-prices &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Index of Private Housing Rental Prices &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; An experimental price index tracking the prices paid for renting property from private landlords in the United Kingdom &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 16 September 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-9-and-10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, place of work and place of residence by Parliamentary constituency: ASHE Tables 9 and 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by home and work-based Parliamentary constituency &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-11-and-12 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and Hours Worked, Work and Residence-Based Travel to Work Area: ASHE Tables 11 and 12 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by home-based and work-based travel to work area. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-table-5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and Hours Worked, UK Region by Industry by Two-Digit SIC: ASHE Table 5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by region, and public and private sector, and non-profit bodies and mutual associations &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; labour-market &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; UK labour market &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; The LFS is a data source compiled from a survey of the UK population. It uses internationally recognised definitions of employment, unemployment and economic activity. It also captures other personal characteristics of household members over the age of 16 such as occupation, education and training. The LFS reflects only a sample of the total population. All cases are therefore weighted on the basis of sub-national population totals by age and sex to give estimates for the entire UK household population. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 15 September 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; regional-gdp-by-quarter &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Quarterly GDP for England, Wales and the English regions &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Quarterly economic activity within England, Wales and the nine English regions (North East, North West, Yorkshire and The Humber, East Midlands, West Midlands, East of England, London, South East, South West). &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; October 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; regional-gdp-by-year &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual GDP for England, Wales and the English regions &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual economic activity within England, Wales and the nine English regions (North East, North West, Yorkshire and the Humber, East Midlands, West Midlands, East of England, Greater London, South East, South West). &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; childrens-wellbeing &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Children's Well-being Measures &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; How children aged 0 to 15 years in the UK are coping in a range of areas that matter to their quality of life, reflecting the circumstances of their lives and their own perspectives.
+
+This is a subset of the children's well-being indicators. For the full dataset, please see 'Children's well-being and social relationships, UK: 2018' in the 'Related datasets' section. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; generational-income &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Generational income: The effects of taxes and benefits &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; The effects of direct and indirect taxation and benefits received in cash or kind on household income, across the generations and by age.
+
+This data is estimated by combining multiple years of the Living Costs and Food Survey, from 1978 to financial year ending March 2019, with the exception of 1979, 1981 and 1984. All financial amounts are adjusted for inflation using the Consumer Prices Index including owner occupiers’ housing costs (CPIH) excluding Council Tax, to their financial year ending March 2018. For example, the mean disposable income for those aged 35 and born in the 1970’s (£34,930) is estimated by taking the average (in real terms) of the household disposable income for these people across the combined dataset. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; £ (Mean average amount) &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-26 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, care workers: ASHE Table 26 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, for care workers, home carers and senior care workers as defined in the Standard Occupational Classification. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-25 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, UK region by public and private sector: ASHE Table 25 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by region, and public and private sector, and non-profit bodies and mutual associations. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-3 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, region by occupation by two-digit SOC: ASHE Table 3 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by region and two-digit Standard Occupational Classification 2010. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-20 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, age group by occupation by two-digit SOC: ASHE Table 20 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by age group and two-digit Standard Occupational Classification 2010. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ashe-tables-27-and-28 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Earnings and hours worked, place of work and place of residence by local enterprise partnerships: ASHE Tables 27 and 28 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Annual estimates of paid hours worked and earnings for UK employees by sex, and full-time and part-time, by work-based and home-based local enterprise partnerships. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; wellbeing-quarterly &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Quarterly personal well-being estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Seasonally adjusted quarterly estimates of life satisfaction, worthwhile, happiness and anxiety in the UK. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; TBD &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ageing-population-estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, based on annual mid-year population estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Indicators included have been derived from the published 2019 mid-year population estimates for the UK, England, Wales, Scotland and Northern Ireland. These are the number of persons and percentage of the population aged 65 years and over, 85 years and over, 0 to 15 years, 16 to 64 years, 16 years to State Pension age, State Pension age and over, median age and the Old Age Dependency Ratio (the number of people of State Pension age per 1000 of those aged 16 years to below State Pension age).
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in a subnational ageing tool, which will be published in July 2020. The tool will enable users to compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; June 2021 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; older-people-sex-ratios &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, sex ratios for people aged 65 and over and 85 and over &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Both indicators included have been derived from the published 2019 mid-year population estimates for the UK, England, Wales, Scotland and Northern Ireland. These are sex ratios for people aged 65 years and over and 85 years and over. A sex ratio shows the number of males in the population for every 100 females.
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in a subnational ageing tool, which will be published in July 2020. The tool will enable users to compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; June 2021 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; older-people-net-internal-migration &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, net internal migration people aged 65 and over and 85 and over &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Figures presented show the movement of older people between local authorities and regions. Both indicators included in this dataset have been derived from the published 2019 internal migration dataset for England and Wales. The numbers presented are the net number of people aged 65 years and over and 85 years and over entering/ leaving the local authority or region in the 12-month period stated.
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in a subnational ageing tool, which will be published in July 2020. The tool will be interactive, and users will be able to compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; June 2021 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; older-people-economic-activity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, older people economic activity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Indicators included are economic activity and employment rates for those aged 50-64 years, by country, region and local authority. Both economic activity and employment rates are displayed as percentages. These have been calculated from the ONS Annual Population Survey and have been extracted from NOMIS.
+
+https://www.nomisweb.co.uk/
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in a subnational ageing tool, which will be published in July 2020. The tool will be interactive, and users will be able to compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. 
+
+Note on update frequency: NOMIS provide quarterly updates on both indicators. For consistency with other indicators presented in the subnational ageing tool, these will be updated on an annual basis. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; June 2021 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; health-accounts &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Expenditure on healthcare: UK Health Accounts &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Healthcare expenditure statistics, produced to the international definitions of the System of Health Accounts 2011.
+
+Subcategories may not sum to aggregates due to rounding. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; weekly-deaths-age-sex &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Deaths registered weekly in England and Wales by age and sex &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, by age and sex, in the latest weeks for which data are available. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; weekly-deaths-region &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Deaths registered weekly in England and Wales by region &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, by region, in the latest weeks for which data are available. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; weekly-deaths-health-board &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Death registrations and occurrences by health board and place of death &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in Wales, by health board and place of death, in the latest weeks for which data are available. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; weekly-deaths-local-authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Death registrations and occurrences by local authority and place of death &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, including deaths involving the coronavirus (COVID-19), by local authority, health board and place of death in the latest weeks for which data are available. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; house-prices-local-authority &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; House price statistics for small areas in England and Wales &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Summary statistics for housing transactions by local authority in England and Wales, on an annual basis, updated quarterly using HM Land Registry Price Paid Data. Select values from the Year and Month dimensions for data for a 12-month period ending that month and year (e.g. selecting June and 2018 will return the twelve months to June 2018). &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; TBA &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; ageing-population-projections &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, population projections for older people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Projected indicators included are derived from the published 2018-based subnational population projections for England, Wales, Scotland and Northern Ireland up to the year 2043. The indicators are the projected percentage of the population aged 65 years and over, 85 years and over, 0 to 15 years, 16 to 64 years, 16 years to State Pension age, State Pension age and over, median age and the Old Age Dependency Ratio (the number of people of State Pension age per 1000 of those aged 16 years to below State Pension age). 
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in the subnational ageing tool, which was published on July 20, 2020 (see link in Related datasets). The tool is interactive, and users can compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. 
+
+Note on data sources: England, Wales, Scotland and Northern Ireland independently publish subnational population projections and the data available here are a compilation of these datasets. The ONS publish national level data for the UK, England, Wales and England &amp;amp; Wales, which has been included. National level data for Scotland and Northern Ireland have been taken from their subnational population projections datasets. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; projections-older-people-sex-ratios &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, projected sex ratios for older people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Projected indicators included are derived from the published 2018-based subnational population projections for England, Wales, Scotland and Northern Ireland up to the year 2043. The indicators are the projected sex ratio for those aged 65 years and over and the projected sex ratio for those aged 85 years and over. A sex ratio shows the number of males in the population for every 100 females.
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in the subnational ageing tool, which was published on July 20, 2020 (see link in Related datasets). The tool is interactive, and users can compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. 
+
+Note on data sources: England, Wales, Scotland and Northern Ireland independently publish subnational population projections and the data available here are a compilation of these datasets. The ONS publish national level data for the UK, England, Wales and England &amp;amp; Wales, which has been included. National level data for Scotland and Northern Ireland have been taken from their subnational population projections datasets. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; faster-indicators-shipping-data &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Coronavirus and the latest indicators for the UK economy and society: Shipping indicators &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; These shipping indicators are based on counts of all vessels, and cargo and tanker vessels. As discussed in Faster indicators of UK economic activity: shipping (please see the related links), we expect the shipping indicators to be related to the import and export of goods. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 27 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; projections-older-people-in-single-households &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Local authority ageing statistics, household projections for older people &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Projected indicators included are derived from the published 2018-based household projections for England for the years 2018 up to 2043. The indicators are the percentage of one-person households, in which the householder is aged 65 years and over and the percentage of one-person households, in which the householder is aged 85 years and over. 
+
+This dataset has been produced by the Ageing Analysis Team for inclusion in a subnational ageing tool, which will be published in July 2020. The tool will be interactive, and users will be able to compare latest and projected measures of ageing for up to four different areas through selection on a map or from a drop-down menu. 
+
+Note on data availability: England, Wales, Scotland and Northern Ireland independently publish subnational household projections. Each country publishes a different set of age breakdowns and only England provide the breakdowns required to calculate the indicators included above. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; To be announced &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; tax-benefits-statistics &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Effects of Taxes and Benefits on Household Income &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Estimates of mean and median annual incomes in the UK, by quintile groups.
+The redistribution effects on individuals of direct and indirect taxation and benefits received in cash or kind. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; TBA &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; online-job-advert-estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Faster Indicators - Online Job Advert Estimates &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Experimental job advert indices covering the UK job market. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 27 August 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; gdp-4-dp &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; GDP monthly estimate (incoporating the Index of Services and Index of Production) &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Gross domestic product (GDP) measures the value of goods and services produced in the UK. It estimates the size of and growth in the economy. This dataset also contains the Index of Services (monthly movements in output for the services industries) and the Index of Production (movements in the volume of production for the UK production industries: manufacturing, mining and quarrying, energy supply, and water and waste management). Figures are seasonally adjusted. &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Index. Seasonally adjusted 2016=100 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 11 September 2020 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+
+### Available editions
+
+```r
+ons_available_editions(id="weekly-deaths-region")
+```
+
+```
+##    edition
+## 1  2010-19
+## 2 covid-19
+```
+
+---
+### Available versions
+
+```r
+ons_available_versions(id="weekly-deaths-region", edition='covid-19')
+```
+
+```
+##    version
+## 1        1
+## 2        2
+## 3        3
+## 4        4
+## 5        5
+## 6        6
+## 7        7
+## 8        8
+## 9        9
+## 10      10
+## 11      11
+## 12      12
+## 13      13
+## 14      14
+## 15      15
+## 16      16
+## 17      17
+```
+---
+
+# Full pipeline - set-up
+
+
+```r
+*monstr_pipeline_defaults() %&gt;%
+* ons_datasets_setup() %&gt;%
+*ons_dataset_by_id("weekly-deaths-region") %&gt;%
+	ons_download(format="csv") %&gt;%
+	monstr_read_file() %&gt;%  
+	monstr_clean() %&gt;%
+	monstr_write_clean(format="all")
+```
+
+
+---
+
+# Full pipeline - download
+
+
+```r
+monstr_pipeline_defaults() %&gt;%  
+  ons_datasets_setup() %&gt;% 
+	ons_dataset_by_id("weekly-deaths-region") %&gt;%  
+*ons_download(format="csv") %&gt;%
+	monstr_read_file() %&gt;%  
+	monstr_clean() %&gt;%
+	monstr_write_clean(format="all")
+```
+
+---
+
+# Full pipeline - cleaning
+
+
+```r
+monstr_pipeline_defaults() %&gt;%  
+  ons_datasets_setup() %&gt;% 
+	ons_dataset_by_id("weekly-deaths-region") %&gt;%  
+	ons_download(format="csv") %&gt;% 
+*monstr_read_file() %&gt;%
+*monstr_clean() %&gt;%
+*monstr_write_clean(format="all")
+```
+
+
+---
+
+# What did we learn?
+
+- `usethis` package makes package building easy
+- `packagedown`package makes it incredibly easy to set up a website!
+- github actions let's you automate the boring bits
+
+
+---
+# What's next
+
+- improve documentation
+
+--
+
+- add units tests
+
+--
+
+- build into our data pipeline
+
+---
+## Please try monstR
+
+- download the package
+
+- let's us know what works and what doesn't
+
+- suggest new features
+
+
+https://github.com/HFAnalyticsLab/monstR
+
+ &lt;img src="monstr_gh_screengrab.png " style=" width: 100%" align=right /&gt;
+
+---
+
+class: center, middle
+
+# Thanks!
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
