@@ -3,9 +3,8 @@
   <head>
     <title>Presenting monstR:</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Emma Vestesson" />
+    <meta name="author" content="Emma Vestesson @gummifot" />
     <meta name="date" content="2020-08-25" />
-    <script src="libs/header-attrs/header-attrs.js"></script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -14,7 +13,7 @@ class: center, middle, inverse, title-slide
 
 # Presenting monstR:
 ## Why R was vital to our response to COVID-19
-### Emma Vestesson
+### Emma Vestesson <span class="citation">@gummifot</span>
 ### 2020-08-25
 
 ---
@@ -52,6 +51,8 @@ We connect what works
 on the ground with
 effective policymaking 
 and vice versa.
+
+
 ]
 
 
@@ -62,8 +63,21 @@ class: inverse, middle, center
 # Ensuring everyone’s health and care benefits from analytics and data-driven technology
 
 ---
+# 
 
-## Our work pre-COVID-19
+.pull-left[
+
+ &lt;img src="nhsr_sticker.jpg" style="transform:rotate(90deg); width: 100%" align=right /&gt;
+
+]
+.pull-right[
+ &lt;img src="apha_sticker.jpg" style="transform:rotate(90deg); width: 100%" align=right /&gt;
+]
+
+
+---
+
+## Open analytics at the Health Foundation
 
 .pull-left[
 ### Sharing our code
@@ -82,19 +96,23 @@ class: inverse, middle, center
 - Working remotely
 --
 
+- Workload increased
+
+--
+
 - Work became more reactive - often responding to data releases the same day
 
 --
 
-- Work updated on a regular basis
+- Outputs updated when new data became available
 
 --
 
-- Work informing policy - vital to be transparent
+- Aiming to inform policy - vital to be transparent
+
 --
 
-
-We needed an open data pipeline to enable us to analyse data more quickly in a transparent and reproducible way.
+Even more committed to being open but we need an open data pipeline to enable us to analyse data more quickly in a transparent and reproducible way.
 
 
 ---
@@ -102,7 +120,7 @@ We needed an open data pipeline to enable us to analyse data more quickly in a t
 
 # Open data pipeline
 
-1. download the data
+1. download publicly available data
 1. clean the data
 1. create charts and tables
 &lt;br&gt;
@@ -119,6 +137,12 @@ We needed an open data pipeline to enable us to analyse data more quickly in a t
 
 # Getting your hands on the data
 
+--
+
+&lt;a href="https://imgflip.com/i/4cn4pw"&gt;&lt;img src="https://i.imgflip.com/4cn4pw.jpg" title="made at imgflip.com"/&gt;&lt;/a&gt;&lt;div&gt;&lt;a href="https://imgflip.com/memegenerator"&gt;from Imgflip Meme Generator&lt;/a&gt;&lt;/div&gt;
+
+---
+# Letting R do all the work
 You can download the data directly from the internet without leaving RStudio.
 
 `download.file()` from base R
@@ -141,7 +165,7 @@ The link changes every time the data is updated
 ---
 
 
-Scrape the link
+# Scrape the link 
 
 ```r
 link &lt;- 'https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/weeklyprovisionalfiguresondeathsregisteredinenglandandwales'
@@ -159,6 +183,10 @@ destfile_ONS &lt;- here::here('data', 'original data', name_2020)
 curl_download(paste0('https://www.ons.gov.uk/', link_2020), destfile = destfile_ONS)
 ```
 
+
+--
+
+Depends on structure of website so requires time setting up
 ---
 
 
@@ -179,11 +207,15 @@ curl_download(paste0('https://www.ons.gov.uk/', link_2020), destfile = destfile_
 - wrote unit tests using `testthat` package to warn us if data changes
 
 ---
+# Clean up our pipeline
+Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
+
+&lt;img src=https://www.thespruce.com/thmb/vMZRLeSg2pxqHxTVEDUXx9IQ_Hc=/2000x1334/filters:fill(auto,1)/clean-new-home-before-moving-2435799-02-71f8349ba4e644019d22f19172523761.jpg style=" width: 90%" align=bottom/&gt;
+---
 class: 
 # The birth of monstR
 
 
-Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
 
  &lt;img src="monstr_gh_screengrab.png " style=" width: 100%" align=right /&gt;
 
@@ -191,17 +223,35 @@ Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
 
 ---
 
-# What is an API
+# What is an API?
+
+**My pre-monstR understanding** : I have no idea but if there is one then I should use it.
+
+--
 
 **Wikipedia definition** : An application programming interface (API) is a computing interface which defines interactions between multiple software intermediaries.
 
 --
 
-**My definition** : A bunch of json files that will eventually give me a link 
+**My definition** : A bunch of json files that will eventually give me a link. 
 
 Let's have a look!
 
 https://api.beta.ons.gov.uk/v1/datasets
+
+---
+class: inverse, middle
+
+#`monstR` makes navigating those files easier!
+
+---
+# Main functions
+
+Only really 3 functions you need to worry about
+
+- `available_datasets()`
+- `available_editions()`
+- `available_versions()` 
 
 ---
 
@@ -213,11 +263,6 @@ https://api.beta.ons.gov.uk/v1/datasets
 datasets &lt;- ons_available_datasets()
 ```
 
-
-
-```r
-knitr::kable(datasets[1:5], format='html')
-```
 
 &lt;table&gt;
  &lt;thead&gt;
@@ -491,28 +536,28 @@ Subcategories may not sum to aggregates due to rounding. &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Deaths registered weekly in England and Wales by age and sex &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, by age and sex, in the latest weeks for which data are available. &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
-   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 2 September 2020 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; weekly-deaths-region &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Deaths registered weekly in England and Wales by region &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, by region, in the latest weeks for which data are available. &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
-   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 2 September 2020 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; weekly-deaths-health-board &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Death registrations and occurrences by health board and place of death &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in Wales, by health board and place of death, in the latest weeks for which data are available. &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
-   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 1 September 2020 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; weekly-deaths-local-authority &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Death registrations and occurrences by local authority and place of death &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; Provisional counts of the number of deaths registered in England and Wales, including deaths involving the coronavirus (COVID-19), by local authority, health board and place of death in the latest weeks for which data are available. &lt;/td&gt;
    &lt;td style="text-align:left;"&gt; NA &lt;/td&gt;
-   &lt;td style="text-align:left;"&gt; 25 August 2020 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 1 September 2020 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; house-prices-local-authority &lt;/td&gt;
@@ -626,6 +671,7 @@ ons_available_versions(id="weekly-deaths-region", edition='covid-19')
 ## 15      15
 ## 16      16
 ## 17      17
+## 18      18
 ```
 ---
 
@@ -676,11 +722,11 @@ monstr_pipeline_defaults() %&gt;%
 
 ---
 
-# What did we learn?
+# What did we learn building our first package?
 
 - `usethis` package makes package building easy
 - `packagedown`package makes it incredibly easy to set up a website!
-- github actions let's you automate the boring bits
+- github actions let's you automate the boring bits (and you get badges for your readme!)
 
 
 ---
@@ -694,7 +740,13 @@ monstr_pipeline_defaults() %&gt;%
 
 --
 
+- work with the ONS team
+
+--
+
 - build into our data pipeline
+
+
 
 ---
 ## Please try monstR
@@ -712,11 +764,14 @@ https://github.com/HFAnalyticsLab/monstR
 
 ---
 
-class: center, middle
+class: middle
 
 # Thanks!
 
-
+All of contributors can be found on our github page
+- Neale Swinnerton - wrote most of the code
+- Fiona Grimm - designed the logo
+- Richard Brine - came up with the name
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

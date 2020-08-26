@@ -1,7 +1,7 @@
 ---
-title: "Presenting monstR: "
+title: "Presenting monstR:  "
 subtitle: "Why R was vital to our response to COVID-19"
-author: "Emma Vestesson"
+author: "Emma Vestesson @gummifot"
 date: '2020-08-25'
 output:
   xaringan::moon_reader:
@@ -56,6 +56,8 @@ We connect what works
 on the ground with
 effective policymaking 
 and vice versa.
+
+
 ]
 
 
@@ -66,8 +68,21 @@ class: inverse, middle, center
 # Ensuring everyone’s health and care benefits from analytics and data-driven technology
 
 ---
+# 
 
-## Our work pre-COVID-19
+.pull-left[
+
+ <img src="nhsr_sticker.jpg" style="transform:rotate(90deg); width: 100%" align=right />
+
+]
+.pull-right[
+ <img src="apha_sticker.jpg" style="transform:rotate(90deg); width: 100%" align=right />
+]
+
+
+---
+
+## Open analytics at the Health Foundation
 
 .pull-left[
 ### Sharing our code
@@ -86,19 +101,23 @@ class: inverse, middle, center
 - Working remotely
 --
 
+- Workload increased
+
+--
+
 - Work became more reactive - often responding to data releases the same day
 
 --
 
-- Work updated on a regular basis
+- Outputs updated when new data became available
 
 --
 
-- Work informing policy - vital to be transparent
+- Aiming to inform policy - vital to be transparent
+
 --
 
-
-We needed an open data pipeline to enable us to analyse data more quickly in a transparent and reproducible way.
+Even more committed to being open but we need an open data pipeline to enable us to analyse data more quickly in a transparent and reproducible way.
 
 
 ---
@@ -106,7 +125,7 @@ We needed an open data pipeline to enable us to analyse data more quickly in a t
 
 # Open data pipeline
 
-1. download the data
+1. download publicly available data
 1. clean the data
 1. create charts and tables
 <br>
@@ -123,6 +142,12 @@ We needed an open data pipeline to enable us to analyse data more quickly in a t
 
 # Getting your hands on the data
 
+--
+
+<a href="https://imgflip.com/i/4cn4pw"><img src="https://i.imgflip.com/4cn4pw.jpg" title="made at imgflip.com"/></a><div><a href="https://imgflip.com/memegenerator">from Imgflip Meme Generator</a></div>
+
+---
+# Letting R do all the work
 You can download the data directly from the internet without leaving RStudio.
 
 `download.file()` from base R
@@ -145,7 +170,7 @@ The link changes every time the data is updated
 ---
 
 
-Scrape the link
+# Scrape the link 
 ```{r, eval=FALSE}
 link <- 'https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/datasets/weeklyprovisionalfiguresondeathsregisteredinenglandandwales'
 bow(link)
@@ -162,6 +187,10 @@ destfile_ONS <- here::here('data', 'original data', name_2020)
 curl_download(paste0('https://www.ons.gov.uk/', link_2020), destfile = destfile_ONS)
 ```
 
+
+--
+
+Depends on structure of website so requires time setting up
 ---
 
 
@@ -182,11 +211,15 @@ curl_download(paste0('https://www.ons.gov.uk/', link_2020), destfile = destfile_
 - wrote unit tests using `testthat` package to warn us if data changes
 
 ---
+# Clean up our pipeline
+Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
+
+<img src=https://www.thespruce.com/thmb/vMZRLeSg2pxqHxTVEDUXx9IQ_Hc=/2000x1334/filters:fill(auto,1)/clean-new-home-before-moving-2435799-02-71f8349ba4e644019d22f19172523761.jpg style=" width: 90%" align=bottom/>
+---
 class: 
 # The birth of monstR
 
 
-Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
 
  <img src="monstr_gh_screengrab.png " style=" width: 100%" align=right />
 
@@ -194,17 +227,35 @@ Working with Neale Swinnerton from [MastodonC](https://www.mastodonc.com/)
 
 ---
 
-# What is an API
+# What is an API?
+
+**My pre-monstR understanding** : I have no idea but if there is one then I should use it.
+
+--
 
 **Wikipedia definition** : An application programming interface (API) is a computing interface which defines interactions between multiple software intermediaries.
 
 --
 
-**My definition** : A bunch of json files that will eventually give me a link 
+**My definition** : A bunch of json files that will eventually give me a link. 
 
 Let's have a look!
 
 https://api.beta.ons.gov.uk/v1/datasets
+
+---
+class: inverse, middle
+
+#`monstR` makes navigating those files easier!
+
+---
+# Main functions
+
+Only really 3 functions you need to worry about
+
+- `available_datasets()`
+- `available_editions()`
+- `available_versions()` 
 
 ---
 
@@ -216,7 +267,7 @@ datasets <- ons_available_datasets()
 ```
 
 
-```{r, eval=TRUE, echo=TRUE}
+```{r, eval=TRUE, echo=FALSE}
 knitr::kable(datasets[1:5], format='html')
 ```
 
@@ -279,11 +330,11 @@ monstr_pipeline_defaults() %>%
 
 ---
 
-# What did we learn?
+# What did we learn building our first package?
 
 - `usethis` package makes package building easy
 - `packagedown`package makes it incredibly easy to set up a website!
-- github actions let's you automate the boring bits
+- github actions let's you automate the boring bits (and you get badges for your readme!)
 
 
 ---
@@ -297,7 +348,13 @@ monstr_pipeline_defaults() %>%
 
 --
 
+- work with the ONS team
+
+--
+
 - build into our data pipeline
+
+
 
 ---
 ## Please try monstR
@@ -315,8 +372,13 @@ https://github.com/HFAnalyticsLab/monstR
 
 ---
 
-class: center, middle
+class: middle
 
 # Thanks!
+
+All of contributors can be found on our github page
+- Neale Swinnerton - wrote most of the code
+- Fiona Grimm - designed the logo
+- Richard Brine - came up with the name
 
 
