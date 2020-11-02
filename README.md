@@ -5,7 +5,7 @@
 
 ## Project Description
 
-Slides for presentation at LondonR 25 August 2020 ([link to recording])(https://youtu.be/LQKgiGgibds).  
+Slides for presentation at LondonR 25 August 2020 [link to recording](https://youtu.be/LQKgiGgibds).  
 
 Presentation covers the [monstR package](https://github.com/HFAnalyticsLab/monstR/).
 
